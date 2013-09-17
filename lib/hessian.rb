@@ -191,7 +191,7 @@ module Hessian
           @data.slice!(0, 1)
           list
         when 'M'
-          type = (@data[0,1] == 't' ? @data.slice!(0, 3 + @data.unpack('cn')[1]) : nil)
+          type = (@data[0,1] == 't' ? from_utf8(@data.slice!(0, 3).unpack('cn')[1]) : nil)
           
           @refs << (map = {})
           map[parse_object()] = parse_object while @data[0,1] != 'z'
