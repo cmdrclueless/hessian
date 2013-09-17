@@ -14,7 +14,7 @@ module Hessian
     # forward any unknown methods directly to the 
     # encapsulated object
     def method_missing(id, *args, &block)
-      object.send(id, *args, &block)
+      object.respond_to?(id) ? object.send(id, *args, &block) : super
     end
   end
   
