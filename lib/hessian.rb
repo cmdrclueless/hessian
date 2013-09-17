@@ -18,9 +18,10 @@ module Hessian
   end
 
   class HessianException < RuntimeError
-    attr_reader :code
-    def initialize(code)
+    attr_reader :code, :details
+    def initialize(code, details=nil)
       @code = code
+      @details = details
     end
   end
 
@@ -74,8 +75,7 @@ module Hessian
           [ 'S', val.length ].pack('an') << val.unpack('C*').pack('U*')
         when Symbol
           [ 'S', val.to_s.length ].pack('an') << val.to_s.unpack('C*').pack('U*')
-        when
-          Integer
+        when Integer
           # Max and min values for integers in Java.
           if val >= -0x80000000 && val <= 0x7fffffff
             [ 'I', val ].pack('aN')
@@ -189,13 +189,13 @@ module Hessian
           @data.slice!(0, 1)
           list
         when 'M'
-          # Skip type + type length (2 bytes) if specified.
-          @data.slice!(0, 3 + @data.unpack('an')[1]) if @data[0,1] == 't'
+          type = (@data[0,1] == 't' ? @data.slice!(0, 3 + @data.unpack('cn')[1]) : nil)
+          
           @refs << (map = {})
           map[parse_object()] = parse_object while @data[0,1] != 'z'
-          # Get rid of the 'z'.
-          @data.slice!(0, 1)
-          map
+          @data.slice!(0, 1) # remove the final 'z'
+
+          type ? TypeWrapper.new(type, map) : map
         else
           raise "Invalid type: '#{t}'"
         end
@@ -214,12 +214,19 @@ module Hessian
 
       def raise_exception
         # Skip code description.
-        parse_object
+        key = parse_object
+        raise RuntimeException, "Error in protocol stream, expected 'code'" unless key == 'code'
         code = parse_object
-        # Skip message description
-        parse_object
+        
+        key = parse_object
+        raise RuntimeException, "Error in protocol stream, expected 'message'" unless key == 'message'
         msg = parse_object
-        raise HessianException.new(code), msg
+
+        key = parse_object
+        raise RuntimeException, "Error in protocol stream, expected 'detail'" unless key == 'detail'
+        detail = parse_object
+
+        raise HessianException.new(code,detail), msg
       end
     end
   end
