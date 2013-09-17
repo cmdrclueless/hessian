@@ -10,6 +10,9 @@ module Hessian
     def initialize(hessian_type, object)
       @hessian_type, @object = hessian_type, object
     end
+    def to_s
+      object.to_s
+    end
   end
   
   class Binary
@@ -181,17 +184,24 @@ module Hessian
         when 'R'
           @refs[@data.slice!(0, 4).unpack('N')[0]]
         when 'V'
-          # Skip type + type length (2 bytes) if specified.
-          @data.slice!(0, 3 + @data.unpack('an')[1]) if @data[0,1] == 't'
+          type = nil
+          if @data[0,1] == 't'
+            length = @data.slice!(0, 3).unpack('cn')[1]
+            type   = @data.slice!(0, length).force_encoding('UTF-8')
+          end
           # Skip the list length if specified.
           @data.slice!(0, 5) if @data[0,1] == 'l'
           @refs << (list = [])
           list << parse_object while @data[0,1] != 'z'
-          # Get rid of the 'z'.
-          @data.slice!(0, 1)
-          list
+          @data.slice!(0, 1) # remove the final z
+
+          type ? TypeWrapper.new(type, list) : list
         when 'M'
-          type = (@data[0,1] == 't' ? from_utf8(@data.slice!(0, 3).unpack('cn')[1]) : nil)
+          type = nil
+          if @data[0,1] == 't'
+            length = @data.slice!(0, 3).unpack('cn')[1]
+            type   = @data.slice!(0, length).force_encoding('UTF-8')
+          end
           
           @refs << (map = {})
           map[parse_object()] = parse_object while @data[0,1] != 'z'
