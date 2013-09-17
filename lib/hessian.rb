@@ -3,6 +3,8 @@ require 'net/http'
 require 'net/https'
 
 module Hessian
+  VERSION = '1.0.2'
+
   class TypeWrapper
     attr_accessor :hessian_type, :object
     def initialize(hessian_type, object)
