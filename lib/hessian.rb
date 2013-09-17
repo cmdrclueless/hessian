@@ -10,8 +10,11 @@ module Hessian
     def initialize(hessian_type, object)
       @hessian_type, @object = hessian_type, object
     end
-    def to_s
-      object.to_s
+
+    # forward any unknown methods directly to the 
+    # encapsulated object
+    def method_missing(id, *args, &block)
+      object.send(id, *args, &block)
     end
   end
   
